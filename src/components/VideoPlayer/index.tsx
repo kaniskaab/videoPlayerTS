@@ -53,8 +53,6 @@ const VideoPlayer: React.FC = () => {
             const { start, duration } = timestamps[currentTimestampIndex];
             const currentTime = state.playedSeconds;
     
-            console.log(currentTime, " ", start + duration);
-    
             // Check if the current time is past the end of the timestamp
             if (currentTime >= start + duration) {
                 setCurrentTimestampIndex(prev => {
