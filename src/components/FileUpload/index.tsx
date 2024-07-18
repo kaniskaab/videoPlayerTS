@@ -1,21 +1,28 @@
-import React, { useState, useRef, ChangeEvent } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 
 interface VideoFile {
   file: File;
   preview: string;
+  progress: number;
 }
 
 const VideoUploader: React.FC = () => {
   const [videos, setVideos] = useState<VideoFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const addVideos = useCallback((files: FileList) => {
+    const newVideos = Array.from(files).map(file => ({
+      file: file,
+      preview: URL.createObjectURL(file),
+      progress: 0
+    }));
+    setVideos(prev => [...prev, ...newVideos]);
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newVideos = Array.from(e.target.files).map(file => ({
-        file: file,
-        preview: URL.createObjectURL(file)
-      }));
-      setVideos(prev => [...prev, ...newVideos]);
+      addVideos(e.target.files);
     }
   };
 
@@ -40,12 +47,60 @@ const VideoUploader: React.FC = () => {
       console.log(`Size: ${video.file.size} bytes`);
       console.log(`Type: ${video.file.type}`);
       console.log('---');
+
+      // Simulating upload with progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        setVideos(prev => 
+          prev.map((v, i) => i === index ? { ...v, progress } : v)
+        );
+        if (progress >= 100) {
+          clearInterval(interval);
+        }
+      }, 500);
     });
-    // Implement your upload logic here
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addVideos(e.dataTransfer.files);
+      e.dataTransfer.clearData();
+    }
   };
 
   return (
-    <div>
+    <div
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      style={{
+        border: isDragging ? '2px dashed blue' : '2px dashed grey',
+        padding: '20px',
+        minHeight: '300px'
+      }}
+    >
       <input
         type="file"
         ref={fileInputRef}
@@ -82,9 +137,36 @@ const VideoUploader: React.FC = () => {
             >
               ✕
             </button>
+            {video.progress > 0 && (
+              <div style={{
+                position: 'absolute',
+                bottom: '0',
+                left: '0',
+                width: `${video.progress}%`,
+                height: '5px',
+                background: 'green'
+              }} />
+            )}
           </div>
         ))}
       </div>
+      {isDragging && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontSize: '24px'
+        }}>
+          Drop videos here
+        </div>
+      )}
     </div>
   );
 };
